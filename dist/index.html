@@ -55,6 +55,16 @@
   <div class="container">
     <div class="aa-panel">
       <div class="aa-panel__head"><div><p class="eyebrow">Submit the evidence</p><h2>Open a new case</h2></div><span class="aa-status">AI-powered preview</span></div>
+      <section class="aa-auth" aria-label="Account">
+        <div id="auth-signed-out">
+          <p class="eyebrow">Your case allowance</p>
+          <h3>Sign in for your free Argument Autopsy</h3>
+          <div class="aa-auth__row"><input id="auth-email-input" type="email" autocomplete="email" placeholder="you@example.com"><button id="auth-send-code" type="button">Email my code</button></div>
+          <div id="auth-code-panel" hidden><p>Enter the six-digit code sent to <strong id="auth-code-email"></strong>.</p><div class="aa-auth__row"><input id="auth-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456"><button id="auth-verify-code" type="button">Verify code</button></div></div>
+        </div>
+        <div id="auth-signed-in" hidden><div><p class="eyebrow">Signed in</p><strong id="auth-email"></strong><span id="auth-credit"></span></div><button id="auth-sign-out" type="button">Sign out</button></div>
+        <p id="auth-error" class="aa-error" aria-live="polite"></p>
+      </section>
       <div class="aa-tabs" role="tablist">
         <button class="aa-tab is-active" type="button" data-tab="paste">Paste conversation</button>
         <button class="aa-tab" type="button" data-tab="upload">Upload screenshots</button>
@@ -78,7 +88,15 @@
           <input type="radio" name="analysis-mode" value="careful">
           <span><strong>Careful Mode</strong><small>Calmer and more constructive for serious or workplace conversations.</small></span>
         </label>
+        <label>
+          <input type="radio" name="analysis-mode" value="unfiltered">
+          <span><strong>Unfiltered Mode (18+)</strong><small>Profanity and blunt behavioral roasting, without hateful or degrading attacks.</small></span>
+        </label>
       </fieldset>
+      <div class="aa-unfiltered" id="unfiltered-disclosure" hidden>
+        <strong>Unfiltered humor selected:</strong> This report may contain profanity, blunt jokes, and exaggerated insults based on your selection. It is entertainment - not objective truth, therapy, legal advice, or permission to harass anyone. Review it before sharing.
+        <label><input id="unfiltered-consent" type="checkbox"> I am at least 18 and want the Unfiltered report style.</label>
+      </div>
       <div class="aa-safety"><strong>Before you continue:</strong> Don't submit emergencies, credible threats, abuse, self-harm, active legal matters, or highly sensitive information. This is entertainment - not therapy, legal advice, or objective truth.</div>
       <label class="aa-consent"><input id="consent" type="checkbox"> I understand this conversation will be sent securely for AI analysis. WDC does not save it, and nothing is shared without my approval.</label>
       <button class="aa-analyze" id="analyze" type="button">Begin Argument Autopsy</button>
@@ -110,6 +128,7 @@
 
 <section class="section aa-how"><div class="container"><div class="section-heading"><p class="eyebrow">How the investigation works</p><h2>From "fine" to forensic finding</h2></div><div class="cards cards--elite"><div class="card"><h3>1. Submit evidence</h3><p>Paste text or choose screenshots.</p></div><div class="card"><h3>2. Find the turn</h3><p>Spot misunderstandings and escalation.</p></div><div class="card"><h3>3. Issue a ruling</h3><p>Get a fair, funny, useful report.</p></div><a class="card" href="/topics/"><h3>4. Explore origins</h3><p>The original WhereDidThatStart investigations still live here.</p></a></div></div></section>
 
+<script src="/js/argument-autopsy-auth.js" defer></script>
 <script src="/js/argument-autopsy.js" defer></script>
 </main>
 

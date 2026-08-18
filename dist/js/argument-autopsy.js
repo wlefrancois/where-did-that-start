@@ -6,6 +6,10 @@
   let mode = 'paste';
   let selectedFiles = [];
 
+  $$('input[name="analysis-mode"]').forEach((input) => input.addEventListener('change', () => {
+    $('#unfiltered-disclosure').hidden = input.value !== 'unfiltered' || !input.checked;
+  }));
+
   $$('.aa-tab').forEach((button) => button.addEventListener('click', () => {
     mode = button.dataset.tab;
     $$('.aa-tab').forEach((item) => item.classList.toggle('is-active', item === button));
@@ -125,6 +129,22 @@
       return;
     }
 
+    const analysisMode = document.querySelector(
+      'input[name="analysis-mode"]:checked'
+    )?.value || 'funny';
+    const loginSession = await window.ArgumentAutopsyAuth.requireSession();
+    if (!loginSession) return;
+    if (analysisMode === 'unfiltered') {
+      if (!$('#unfiltered-consent').checked) {
+        error.textContent = 'Confirm that you are at least 18 and selected Unfiltered humor.';
+        return;
+      }
+      if (!await window.ArgumentAutopsyAuth.acceptUnfilteredTerms()) {
+        error.textContent = 'The Unfiltered Mode acknowledgment could not be saved.';
+        return;
+      }
+    }
+
     const conversation = $('#conversation').value.trim();
     if (mode === 'paste' && messages(conversation).length < 4) {
       error.textContent = 'Please paste at least four messages, or load the sample case.';
@@ -140,9 +160,6 @@
     const stopScanner = startScanner();
 
     try {
-      const analysisMode = document.querySelector(
-        'input[name="analysis-mode"]:checked'
-      )?.value || 'funny';
 
       const requestBody = mode === 'upload'
         ? {
@@ -155,7 +172,7 @@
           };
       const response = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${loginSession.access_token}` },
         body: JSON.stringify(requestBody)
       });
       const payload = await response.json().catch(() => ({}));
@@ -165,6 +182,7 @@
       }
 
       render(payload.report);
+      await window.ArgumentAutopsyAuth.refreshAccount();
       stopScanner();
       $('#scanner').hidden = true;
       $('#report').hidden = false;
