@@ -80,10 +80,16 @@
     return account;
   }
 
+  function availableReports() {
+    if (!account) return 0;
+    if (account.unlimited_until && new Date(account.unlimited_until) > new Date()) return Number.MAX_SAFE_INTEGER;
+    return Number(account.free_reports_remaining || 0) + Number(account.paid_report_credits || 0);
+  }
+
   function creditText() {
     if (!account) return 'Account ready';
-    if (account.unlimited_until && new Date(account.unlimited_until) > new Date()) return 'Unlimited reports';
-    const total = Number(account.free_reports_remaining || 0) + Number(account.paid_report_credits || 0);
+    const total = availableReports();
+    if (total === Number.MAX_SAFE_INTEGER) return 'Unlimited reports';
     return total === 1 ? '1 report available' : `${total} reports available`;
   }
 
@@ -95,6 +101,9 @@
       $('#auth-email').textContent = session.user.email || 'Signed in';
       $('#auth-credit').textContent = creditText();
     }
+    window.dispatchEvent(new CustomEvent('argument-autopsy:account', {
+      detail: { signedIn, available: signedIn ? availableReports() : null }
+    }));
   }
 
   async function initialize() {

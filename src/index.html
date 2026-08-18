@@ -29,6 +29,16 @@
         <div id="auth-signed-in" hidden><div><p class="eyebrow">Signed in</p><strong id="auth-email"></strong><span id="auth-credit"></span></div><button id="auth-sign-out" type="button">Sign out</button></div>
         <p id="auth-error" class="aa-error" aria-live="polite"></p>
       </section>
+      <section class="aa-paywall" id="case-paywall" hidden>
+        <p class="eyebrow">Free case completed</p>
+        <h3>Your free Argument Autopsy has been used</h3>
+        <p>Unlock another case for $1.99 when payments open.</p>
+        <div class="aa-paywall__actions">
+          <button id="restore-report" class="btn btn--primary" type="button">Return to previous result</button>
+          <button class="btn btn--ghost" type="button" disabled>Buy another report - $1.99 (coming soon)</button>
+        </div>
+      </section>
+      <div id="case-entry">
       <div class="aa-tabs" role="tablist">
         <button class="aa-tab is-active" type="button" data-tab="paste">Paste conversation</button>
         <button class="aa-tab" type="button" data-tab="upload">Upload screenshots</button>
@@ -65,6 +75,7 @@
       <label class="aa-consent"><input id="consent" type="checkbox"> I understand this conversation will be sent securely for AI analysis. WDC does not save it, and nothing is shared without my approval.</label>
       <button class="aa-analyze" id="analyze" type="button">Begin Argument Autopsy</button>
       <p class="aa-error" id="form-error" aria-live="polite"></p>
+      </div>
     </div>
   </div>
 </section>

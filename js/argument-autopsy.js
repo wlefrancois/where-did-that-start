@@ -3,6 +3,7 @@
   const $$ = (selector) => [...document.querySelectorAll(selector)];
   const sample = `Alex: What do you want for dinner?\nJordan: I don't care. You choose.\nAlex: Pizza?\nJordan: We had pizza two days ago.\nAlex: This is why I hate choosing.\nJordan: You always act like helping is a huge burden.\nAlex: Calm down. I was just trying to get dinner.\nJordan: Never mind. I'll figure it out myself.`;
   const MAX_IMAGES = 4;
+  const LAST_REPORT_KEY = 'argument_autopsy_last_report_v1';
   let mode = 'paste';
   let selectedFiles = [];
 
@@ -69,8 +70,9 @@
     });
   }
 
-  function render(report) {
-    $('#case-number').textContent = '#' + String(Math.floor(10000 + Math.random() * 89999));
+  function render(report, caseNumber) {
+    const resolvedCaseNumber = caseNumber || '#' + String(Math.floor(10000 + Math.random() * 89999));
+    $('#case-number').textContent = resolvedCaseNumber;
     $('#trigger-quote').textContent = `"${report.turning_point.quote}"`;
     $('#trigger-detail').textContent = report.turning_point.explanation;
     $('#original-topic').textContent = report.original_topic;
@@ -92,7 +94,24 @@
     $('#timeline').innerHTML = report.timeline.map((entry) =>
       `<li><b>${escapeHtml(entry.label)}</b><span><strong>${escapeHtml(entry.speaker)}:</strong> ${escapeHtml(entry.summary)}</span></li>`
     ).join('');
+    sessionStorage.setItem(LAST_REPORT_KEY, JSON.stringify({ report, caseNumber: resolvedCaseNumber }));
+    $('#restore-report').hidden = false;
   }
+
+  function showAllowance(available) {
+    const exhausted = Number(available) === 0;
+    $('#case-paywall').hidden = !exhausted;
+    $('#case-entry').hidden = exhausted;
+    $('#restore-report').hidden = !sessionStorage.getItem(LAST_REPORT_KEY);
+  }
+
+  window.addEventListener('argument-autopsy:account', (event) => {
+    if (event.detail?.signedIn) showAllowance(event.detail.available);
+    else {
+      $('#case-paywall').hidden = true;
+      $('#case-entry').hidden = false;
+    }
+  });
 
   function startScanner() {
     const lines = [
@@ -198,9 +217,23 @@
     }
   });
 
-  $('#new-case').addEventListener('click', () => {
+  $('#new-case').addEventListener('click', async () => {
     $('#report').hidden = true;
+    await window.ArgumentAutopsyAuth.refreshAccount();
     $('#autopsy').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  $('#restore-report').addEventListener('click', () => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(LAST_REPORT_KEY) || 'null');
+      if (!saved?.report) return;
+      render(saved.report, saved.caseNumber);
+      $('#report').hidden = false;
+      $('#report').scrollIntoView({ behavior: 'smooth' });
+    } catch {
+      sessionStorage.removeItem(LAST_REPORT_KEY);
+      $('#restore-report').hidden = true;
+    }
   });
 
   $('#copy-summary').addEventListener('click', async () => {
