@@ -46,9 +46,8 @@
     $('#speaker-a').textContent = 'Participant A';
     $('#speaker-b').textContent = 'Participant B';
 
-    let first = percent(report.participants?.[0]?.contribution_percent, 50);
-    let second = percent(report.participants?.[1]?.contribution_percent, 100 - first);
-    if (first + second !== 100) second = 100 - first;
+    const first = percent(report.participants?.[0]?.contribution_percent, 50);
+    const second = 100 - first;
     $('#blame-a').textContent = first + '%';
     $('#blame-b').textContent = second + '%';
     $('#bar-a').style.width = first + '%';

@@ -144,7 +144,14 @@ If the content involves emergencies, credible threats, abuse, self-harm, legal d
     const text = outputText(result);
     if (!text) return send(response, 502, { error: 'The analysis service returned an incomplete report.' });
 
-    return send(response, 200, { report: JSON.parse(text) });
+    const report = JSON.parse(text);
+    const first = Math.max(0, Math.min(100, Math.round(
+      Number(report.participants?.[0]?.contribution_percent) || 50
+    )));
+    report.participants[0].contribution_percent = first;
+    report.participants[1].contribution_percent = 100 - first;
+
+    return send(response, 200, { report });
   } catch {
     return send(response, 502, { error: 'The analysis service could not complete this case. Please try again.' });
   }
