@@ -87,6 +87,88 @@ function outputText(result) {
   return '';
 }
 
+function scrubObviousIdentifiers(value) {
+  if (typeof value === 'string') {
+    return value
+      .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, '[email removed]')
+      .replace(/https?:\/\/\S+/gi, '[link removed]')
+      .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, '[address removed]')
+      .replace(/\b(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}\b/g, '[phone removed]');
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(scrubObviousIdentifiers);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        scrubObviousIdentifiers(item)
+      ])
+    );
+  }
+
+  return value;
+}
+
+async function sanitizeReport(report) {
+  const privacyResponse = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-5.4-mini',
+      store: false,
+      max_output_tokens: 1800,
+      instructions: `You are the mandatory privacy sanitizer for Argument Autopsy.
+
+Rewrite the supplied report so it is safe to display or share.
+
+Remove or generalize every identifying or unusually specific detail, including:
+- personal names
+- companies, customers, and employers
+- locations, vessels, and facilities
+- projects, departments, and team names
+- software, platforms, products, and vendors
+- usernames, email addresses, phone numbers, and URLs
+- ticket, case, account, device, or order numbers
+- internal acronyms, codes, and unique proper nouns
+
+Use only Participant A and Participant B for people.
+Use generic phrases such as "the organization," "the project," "the location," or "the messaging system."
+
+Preserve the argument's sequence, meaning, fairness, humor, blame distribution, and useful conclusions.
+Do not invent facts.
+Do not preserve a quotation verbatim when it contains identifying information. Paraphrase it or replace the identifying portion.
+Return the complete report using the required schema.`,
+      input: JSON.stringify(report),
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'privacy_safe_argument_autopsy_report',
+          strict: true,
+          schema: reportSchema
+        }
+      }
+    })
+  });
+
+  if (!privacyResponse.ok) {
+    throw new Error(`Privacy sanitizer failed with status ${privacyResponse.status}.`);
+  }
+
+  const privacyResult = await privacyResponse.json();
+  const privacyText = outputText(privacyResult);
+
+  if (!privacyText) {
+    throw new Error('Privacy sanitizer returned no report.');
+  }
+
+  return scrubObviousIdentifiers(JSON.parse(privacyText));
+}
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST');
@@ -174,7 +256,7 @@ If the content involves emergencies, credible threats, abuse, self-harm, legal d
     const text = outputText(result);
     if (!text) return send(response, 502, { error: 'The analysis service returned an incomplete report.' });
 
-    const report = JSON.parse(text);
+    const report = await sanitizeReport(JSON.parse(text));
     const first = Math.max(0, Math.min(100, Math.round(
       Number(report.participants?.[0]?.contribution_percent) || 50
     )));
