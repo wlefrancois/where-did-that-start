@@ -140,9 +140,19 @@
     const stopScanner = startScanner();
 
     try {
+      const analysisMode = document.querySelector(
+        'input[name="analysis-mode"]:checked'
+      )?.value || 'funny';
+
       const requestBody = mode === 'upload'
-        ? { images: await Promise.all(selectedFiles.map(imageData)) }
-        : { conversation };
+        ? {
+            images: await Promise.all(selectedFiles.map(imageData)),
+            analysisMode
+          }
+        : {
+            conversation,
+            analysisMode
+          };
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

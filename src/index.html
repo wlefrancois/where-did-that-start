@@ -32,7 +32,18 @@
         <label class="aa-dropzone" for="screenshots"><strong>Drop conversation screenshots here</strong><span>or choose PNG, JPG, or WEBP files</span><input id="screenshots" type="file" accept="image/png,image/jpeg,image/webp" multiple></label>
         <div id="file-list" class="aa-file-list">No screenshots selected.</div>
       </div>
-      <div class="aa-safety"><strong>Before you continue:</strong> Don't submit emergencies, threats, abuse, legal disputes, or highly sensitive information. This is entertainment - not therapy, legal advice, or objective truth.</div>
+      <fieldset class="aa-mode-choice">
+        <legend>Choose the report style</legend>
+        <label>
+          <input type="radio" name="analysis-mode" value="funny" checked>
+          <span><strong>Funny Mode</strong><small>The full forensic treatment with fair, light sarcasm.</small></span>
+        </label>
+        <label>
+          <input type="radio" name="analysis-mode" value="careful">
+          <span><strong>Careful Mode</strong><small>Calmer and more constructive for serious or workplace conversations.</small></span>
+        </label>
+      </fieldset>
+      <div class="aa-safety"><strong>Before you continue:</strong> Don't submit emergencies, credible threats, abuse, self-harm, active legal matters, or highly sensitive information. This is entertainment - not therapy, legal advice, or objective truth.</div>
       <label class="aa-consent"><input id="consent" type="checkbox"> I understand this conversation will be sent securely for AI analysis. WDC does not save it, and nothing is shared without my approval.</label>
       <button class="aa-analyze" id="analyze" type="button">Begin Argument Autopsy</button>
       <p class="aa-error" id="form-error" aria-live="polite"></p>
