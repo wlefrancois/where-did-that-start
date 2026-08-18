@@ -2,7 +2,9 @@
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => [...document.querySelectorAll(selector)];
   const sample = `Alex: What do you want for dinner?\nJordan: I don't care. You choose.\nAlex: Pizza?\nJordan: We had pizza two days ago.\nAlex: This is why I hate choosing.\nJordan: You always act like helping is a huge burden.\nAlex: Calm down. I was just trying to get dinner.\nJordan: Never mind. I'll figure it out myself.`;
+  const MAX_IMAGES = 4;
   let mode = 'paste';
+  let selectedFiles = [];
 
   $$('.aa-tab').forEach((button) => button.addEventListener('click', () => {
     mode = button.dataset.tab;
@@ -13,17 +15,21 @@
   $('#sample-case').addEventListener('click', () => { $('#conversation').value = sample; });
   $('#screenshots').addEventListener('change', (event) => {
     const files = [...event.target.files];
-    $('#file-list').textContent = files.length ? files.map((file) => file.name).join(', ') : 'No screenshots selected.';
+    const supported = files.filter((file) => ['image/png', 'image/jpeg', 'image/webp'].includes(file.type));
+    selectedFiles = supported.slice(0, MAX_IMAGES);
+    if (files.length > MAX_IMAGES) {
+      $('#file-list').textContent = `Only the first ${MAX_IMAGES} screenshots will be analyzed.`;
+    } else if (supported.length !== files.length) {
+      $('#file-list').textContent = 'Use PNG, JPEG, or WEBP screenshots.';
+    } else {
+      $('#file-list').textContent = selectedFiles.length
+        ? selectedFiles.map((file, index) => `${index + 1}. ${file.name}`).join(' | ')
+        : 'No screenshots selected.';
+    }
   });
 
   function messages(text) {
-    return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line, index) => {
-      const match = line.match(/^([^:]{1,30}):\s*(.+)$/);
-      return {
-        speaker: match ? match[1].trim() : `Participant ${(index % 2) + 1}`,
-        text: match ? match[2].trim() : line
-      };
-    });
+    return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   }
 
   function escapeHtml(value) {
@@ -37,7 +43,29 @@
     return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : fallback;
   }
 
-  function render(items, report) {
+  function imageData(file) {
+    return new Promise((resolve, reject) => {
+      const source = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        const scale = Math.min(1, 1600 / image.width, 3200 / image.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(source);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(source);
+        reject(new Error(`Could not read ${file.name}.`));
+      };
+      image.src = source;
+    });
+  }
+
+  function render(report) {
     $('#case-number').textContent = '#' + String(Math.floor(10000 + Math.random() * 89999));
     $('#trigger-quote').textContent = `"${report.turning_point.quote}"`;
     $('#trigger-detail').textContent = report.turning_point.explanation;
@@ -57,12 +85,9 @@
     $('#root-detail').textContent = report.root_cause.explanation;
     $('#ruling').textContent = report.ruling;
     $('#peace').textContent = report.peace_offering;
-
-    $('#timeline').innerHTML = report.timeline.map((entry) => {
-      const index = Math.max(0, Math.min(items.length - 1, Number(entry.message_index) || 0));
-      const speaker = items[index]?.speaker === items[0]?.speaker ? 'Participant A' : 'Participant B';
-      return `<li><b>${escapeHtml(entry.label)}</b><span><strong>${speaker}:</strong> ${escapeHtml(entry.summary)}</span></li>`;
-    }).join('');
+    $('#timeline').innerHTML = report.timeline.map((entry) =>
+      `<li><b>${escapeHtml(entry.label)}</b><span><strong>${escapeHtml(entry.speaker)}:</strong> ${escapeHtml(entry.summary)}</span></li>`
+    ).join('');
   }
 
   function startScanner() {
@@ -99,27 +124,29 @@
       error.textContent = 'Please confirm the privacy and safety notice.';
       return;
     }
-    if (mode === 'upload') {
-      error.textContent = 'Screenshot reading is coming next. Please paste the conversation for this preview.';
-      return;
-    }
 
     const conversation = $('#conversation').value.trim();
-    const items = messages(conversation);
-    if (items.length < 4) {
+    if (mode === 'paste' && messages(conversation).length < 4) {
       error.textContent = 'Please paste at least four messages, or load the sample case.';
+      return;
+    }
+    if (mode === 'upload' && selectedFiles.length === 0) {
+      error.textContent = 'Select at least one conversation screenshot.';
       return;
     }
 
     button.disabled = true;
-    button.textContent = 'Examining evidence...';
+    button.textContent = mode === 'upload' ? 'Reading screenshots...' : 'Examining evidence...';
     const stopScanner = startScanner();
 
     try {
+      const requestBody = mode === 'upload'
+        ? { images: await Promise.all(selectedFiles.map(imageData)) }
+        : { conversation };
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversation })
+        body: JSON.stringify(requestBody)
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.report) throw new Error(payload.error || 'Analysis failed. Please try again.');
@@ -127,7 +154,7 @@
         throw new Error(payload.report.safety_message || 'This conversation is outside the scope of Argument Autopsy.');
       }
 
-      render(items, payload.report);
+      render(payload.report);
       stopScanner();
       $('#scanner').hidden = true;
       $('#report').hidden = false;
