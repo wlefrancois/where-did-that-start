@@ -242,4 +242,53 @@
     $('#copy-summary').textContent = 'Summary copied';
     setTimeout(() => { $('#copy-summary').textContent = 'Copy privacy-safe summary'; }, 1600);
   });
+  $('#purchase-report').addEventListener('click', async () => {
+    const button = $('#purchase-report');
+    const message = $('#payment-message');
+    message.textContent = '';
+    const current = await window.ArgumentAutopsyAuth.requireSession();
+    if (!current) return;
+    button.disabled = true;
+    button.textContent = 'Opening secure checkout...';
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${current.access_token}`
+        },
+        body: '{}'
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.url) throw new Error(payload.error || 'Checkout could not be started.');
+      window.location.assign(payload.url);
+    } catch (error) {
+      message.textContent = error.message || 'Checkout could not be started.';
+      button.disabled = false;
+      button.textContent = 'Buy another report - $1.99';
+    }
+  });
+
+  async function refreshAfterCheckout() {
+    const parameters = new URLSearchParams(window.location.search);
+    const state = parameters.get('payment');
+    if (!state) return;
+    const message = $('#payment-message');
+    if (state === 'cancelled') {
+      message.textContent = 'Checkout was cancelled. No charge was made.';
+    } else if (state === 'success') {
+      message.textContent = 'Payment received. Adding your report credit...';
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        await window.ArgumentAutopsyAuth.refreshAccount();
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      message.textContent = 'Payment confirmed. Your additional report is ready.';
+    }
+    parameters.delete('payment');
+    parameters.delete('session_id');
+    const query = parameters.toString();
+    history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}#autopsy`);
+  }
+
+  refreshAfterCheckout();
 })();
