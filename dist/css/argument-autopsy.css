@@ -94,3 +94,4 @@
 .aa-paywall p { color: #c7d6fa; }
 .aa-paywall__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
 .aa-paywall .btn[disabled] { opacity: .55; cursor: not-allowed; }
+.aa-paywall [hidden] { display: none !important; }
